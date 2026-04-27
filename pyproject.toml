@@ -1,0 +1,22 @@
+[project]
+name = "ruyi-pytest"
+version = "0.0.1"
+description = "integration test cases for ruyi"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pexpect>=4.9.0",
+    "pytest>=9.0.3",
+    "pytest-env>=1.6.0",
+    "ruyi>=0.47.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.pytest_env]
+env_files = [".env", ".env.test"]
