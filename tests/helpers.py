@@ -2,16 +2,23 @@
 import pexpect
 
 from pathlib import Path
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Union
 
 
-def spawn_ruyi(ruyi_bin: str, args: List[str], env: Dict[str, str], timeout: int = 5) -> pexpect.spawn:
+def spawn_ruyi(
+        ruyi_bin: str,
+        args: List[str],
+        env: Dict[str, str],
+        timeout: int = 5,
+        cwd: Union[str, None] = None
+) -> pexpect.spawn:
     return pexpect.spawn(
         ruyi_bin,
         args,
         env=env, # type: ignore[arg-type]
         encoding="utf-8",
         timeout=timeout,
+        cwd=cwd,
     )
 
 
