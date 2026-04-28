@@ -1,12 +1,11 @@
-import glob
+
 import os
 import pexpect
 import platform
+import pytest
 
 from pathlib import Path
 from typing import Dict
-
-import pytest
 
 from tests.helpers import ruyi_init_default_telemetry, ruyi_install, spawn_ruyi
 

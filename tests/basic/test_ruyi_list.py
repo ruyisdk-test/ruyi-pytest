@@ -1,5 +1,7 @@
 
 import pexpect
+import platform
+import pytest
 import re
 
 from typing import Dict
@@ -12,6 +14,8 @@ def test_ruyi_list(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
         "zh_CN.UTF-8": {
             "List of available packages:": "可用软件包列表：",
             "(latest)": "(最新)",
+            "prerelease": "预发布",
+            "latest-prerelease": "最新预发布",
             "Package declares": "软件包声明了",
             "distfile(s):": "个分发文件：",
             "* Slug: (none)": "* Slug：（无）",
@@ -46,6 +50,23 @@ def test_ruyi_list(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
         child.expect(pexpect.EOF)
         after = child.before
         assert _("Package declares") not in after
+    finally:
+        child.close()
+
+    assert child.exitstatus == 0
+
+    # ruyi list --name-contains coremark
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["list", "--name-contains", "coremark"],
+        env=isolated_env,
+    )
+    try:
+        child.expect_exact(_("List of available packages:"))
+        child.expect_exact("* source/coremark")
+        child.expect_exact(_("prerelease"))
+        child.expect_exact(_("latest-prerelease"))
+        child.expect(pexpect.EOF)
     finally:
         child.close()
 
@@ -182,6 +203,35 @@ def test_ruyi_list(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
     try:
         child.expect_exact(_("arch:"))
         child.expect_exact(_("needs quirks:"))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+
+    assert child.exitstatus == 0
+
+
+@pytest.mark.skipif(platform.machine() != "x86_64", reason="x86_64 only")
+def test_ruyi_list_unavailable_pkg(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
+    _ = bind_gettext(isolated_env, {
+        "zh_CN.UTF-8": {
+            "List of available packages:": "可用软件包列表：",
+            "latest": "最新",
+            "no binary for current host": "无适用当前主机的二进制文件",
+        },
+    })
+
+    ruyi_init_default_telemetry(ruyi_exe, isolated_env)
+
+    # ruyi list --name-contains box64
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["list", "--name-contains", "box64"],
+        env=isolated_env,
+    )
+    try:
+        child.expect_exact(_("List of available packages:"))
+        child.expect_exact(_("latest"))
+        child.expect_exact(_("no binary for current host"))
         child.expect(pexpect.EOF)
     finally:
         child.close()
