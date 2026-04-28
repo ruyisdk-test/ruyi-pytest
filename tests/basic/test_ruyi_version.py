@@ -19,6 +19,7 @@ def test_ruyi_version(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str
         },
     })
 
+    # TODO:
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
 
     child = spawn_ruyi(
