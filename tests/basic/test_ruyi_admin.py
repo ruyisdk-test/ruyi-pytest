@@ -95,6 +95,13 @@ def test_ruyi_admin(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path)
 
 
 def test_ruyi_admin_default_strip_components(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path):
+    """
+    Ruyi will remove `strip_components = 1` as it is default behavior
+    :param ruyi_exe:
+    :param isolated_env:
+    :param tmp_path:
+    :return:
+    """
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
 
     this_file = Path(__file__).resolve()
@@ -148,6 +155,14 @@ def test_ruyi_admin_default_strip_components(ruyi_exe: str, isolated_env: Dict[s
 
 
 def test_ruyi_admin_issue430(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path):
+    """
+    ruyi 0.46.0: ruyi admin format-manifest automatically remove distfiles[].strip_components < 2
+    See: https://github.com/ruyisdk/ruyi/issues/430
+    :param ruyi_exe:
+    :param isolated_env:
+    :param tmp_path:
+    :return:
+    """
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
 
     this_file = Path(__file__).resolve()
