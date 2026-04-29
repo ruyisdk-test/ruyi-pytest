@@ -55,6 +55,22 @@ def ruyi_dep_provisioning(ruyi_dep: bool) -> bool:
 
 
 @pytest.fixture
+def ruyi_build_dep(ruyi_dep: bool) -> bool:
+    deps = [
+        "make",
+    ]
+
+    if not ruyi_dep:
+        return False
+
+    for d in deps:
+        if not shutil.which(d):
+            pytest.fail(f"`{d}` not found in PATH")
+
+    return True
+
+
+@pytest.fixture
 def isolated_env(tmp_path: Path) -> Dict[str, str]:
     root = tmp_path
 
