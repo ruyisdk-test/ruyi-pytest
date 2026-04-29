@@ -1,4 +1,4 @@
-
+import platform
 import pexpect
 
 from pathlib import Path
@@ -7,15 +7,20 @@ from typing import Dict
 from tests.helpers import bind_gettext, ruyi_init_default_telemetry, ruyi_install, spawn_ruyi
 
 
-def test_ruyi_venv_xthead(ruyi_exe: str, ruyi_build_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
+def test_ruyi_toolchain_xthead(ruyi_exe: str, ruyi_build_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
+    pkgs = ["gnu-plct-xthead", ]
+    cmd = ["venv", "-t", "gnu-plct-xthead", ]
+    if platform.machine() == "x86_64":
+        pkgs.append("qemu-user-riscv-xthead")
+        cmd.extend(["-e", "qemu-user-riscv-xthead"])
 
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
-    ruyi_install(ruyi_exe, ["gnu-plct-xthead"], env=isolated_env)
+    ruyi_install(ruyi_exe, pkgs, env=isolated_env)
 
     venv_path = tmp_path / "rit-ruyi-basic-ruyi-xthead"
     child = spawn_ruyi(
         ruyi_exe,
-        ["venv", "-t", "gnu-plct-xthead", "sipeed-lpi4a", str(venv_path)],
+        [*cmd, "sipeed-lpi4a", str(venv_path)],
         env=isolated_env,
     )
     try:
@@ -67,3 +72,30 @@ ruyi-deactivate
         output = child.before
     finally:
         child.close()
+
+    if platform.machine() == "x86_64":
+        child = spawn_ruyi(
+            "bash",
+            [
+                "-c",
+                f'''
+source "{venv_path}/bin/ruyi-activate"
+ruyi-qemu ./coremark.exe
+ruyi-deactivate
+    ''',
+            ],
+            env=isolated_env,
+            timeout=600,
+            cwd=str(source_path),
+        )
+        try:
+            child.expect_exact("CoreMark Size")
+            child.expect_exact("Total ticks")
+            child.expect_exact("Compiler flags")
+            child.expect_exact("Memory location")
+            child.expect_exact("Correct operation validated.")
+            child.expect_exact("CoreMark 1.0")
+            child.expect(pexpect.EOF)
+            output = child.before
+        finally:
+            child.close()
