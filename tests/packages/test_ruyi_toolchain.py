@@ -253,3 +253,73 @@ ruyi-deactivate
     finally:
         child.close()
     assert child.exitstatus == 0
+
+
+def test_ruyi_toolchain_gnu_plct_xiangshan_nanhu(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
+    ruyi_init_default_telemetry(ruyi_exe, isolated_env)
+    ruyi_install(
+        ruyi_exe,
+        ["gnu-plct", ],
+        env=isolated_env,
+    )
+
+    venv_path = tmp_path / "rit-ruyi-basic-ruyi-toolchain_gnu-plct_xiangshan-nanhu"
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["venv", "-t", "gnu-plct", "xiangshan-nanhu", str(venv_path)],
+        env=isolated_env,
+    )
+    try:
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+
+    test_tmp = tmp_path / "test_tmp"
+    test_tmp.mkdir()
+    test_c = test_tmp / "test.c"
+    test_o = test_tmp / "test.o"
+    test_c.write_text("""
+int main()
+{
+        int a = 1, b = 2, c = 3, ret;
+
+        asm ("add.uw %0, %1, %2" :"=r"(ret) :"r"(a), "r"(b) );          // zba
+        asm ("orn %0, %1, %2" :"=r"(ret) :"r"(a), "r"(b) );             // zbb
+        asm ("clmul %0, %1, %2" :"=r"(ret) :"r"(a), "r"(b) );           // zbc
+        asm ("bclr %0, %1, %2" :"=r"(ret) :"r"(a), "r"(b) );            // zbs
+        asm ("pack %0, %1, %2" :"=r"(ret) :"r"(a), "r"(b) );            // zbkb
+        asm ("clmul %0, %1, %2" :"=r"(ret) :"r"(a), "r"(b) );           // zbkc
+        asm ("xperm8 %0, %1, %2" :"=r"(ret) :"r"(a), "r"(b) );          // zbkx
+        asm ("aes64dsm %0, %1, %2" :"=r"(ret) :"r"(a), "r"(b) );        // zknd
+        asm ("aes64es %0, %1, %2" :"=r"(ret) :"r"(a), "r"(b) );         // zkne
+        asm ("sha512sig0 %0, %1" :"=r"(ret) :"r"(a) );                  // zknh
+        asm ("sm4ed %0, %1, %2, 1" :"=r"(ret) :"r"(a), "r"(b) );        // zksed
+        asm ("sm3p0 %0, %1" :"=r"(ret) :"r"(a) );                       // zksh
+        // CFH                                                          // zicbom
+        // CFH                                                          // zicboz
+
+        return 0;
+}
+""", encoding="utf-8")
+
+    child = spawn_ruyi(
+        "bash",
+        [
+            "-c",
+            f'''
+source "{venv_path}/bin/ruyi-activate"
+riscv64-plct-linux-gnu-gcc -O2 -c -o "{test_o}" "{test_c}"
+echo $?
+ruyi-deactivate
+            ''',
+        ],
+        env=isolated_env,
+    )
+    try:
+        child.expect_exact("0")
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
