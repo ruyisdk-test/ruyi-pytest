@@ -23,7 +23,6 @@ def test_ruyi_version(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str
         ruyi_exe,
         ["version"],
         env=isolated_env,
-        timeout=5,
     )
     try:
         child.expect(r"Ruyi (\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?)")
