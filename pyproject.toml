@@ -11,7 +11,7 @@ dev = [
     "pexpect>=4.9.0",
     "pytest>=9.0.3",
     "pytest-env>=1.6.0",
-    "ruyi>=0.47.0",
+    "ruyi>=0.49.0",
 ]
 
 [tool.pytest.ini_options]
