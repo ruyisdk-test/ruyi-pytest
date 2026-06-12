@@ -1,5 +1,6 @@
 import pexpect
 import io
+
 from typing import Dict
 
 from tests.helpers import bind_gettext, ruyi_init_default_telemetry, spawn_ruyi
@@ -86,9 +87,17 @@ def test_ruyi_completion_issue452(ruyi_exe: str, isolated_env: Dict[str, str]):
         child.expect_exact("$ ")
         child.sendline(f'eval "$({ruyi_exe} --output-completion-script=bash)"')
         child.expect_exact("$ ")
-        child.send("ruyi --ver")
+        child.send(f"{ruyi_exe} ")
+        child.send("\t\t")
+        child.expect_exact("admin")
+        child.send('\x03')  # Ctrl-C
+        child.expect_exact("$ ")
+        child.send(f"{ruyi_exe} --ver")
         child.send("\t")
-        child.expect_exact("ruyi --version")
+        child.expect_exact(f"{ruyi_exe} --version")
+        child.send("\n")
+        child.expect_exact("Ruyi ")
+        child.expect_exact("$ ")
     finally:
         child.close()
 
