@@ -1,4 +1,5 @@
 import pexpect
+import io
 
 from typing import Dict
 
@@ -71,4 +72,35 @@ def test_ruyi_output_completion_script(ruyi_exe: str, isolated_env: Dict[str, st
 
 
 def test_ruyi_completion_issue452(ruyi_exe: str, isolated_env: Dict[str, str]):
-    pass
+    shell_env = isolated_env.copy()
+    shell_env["PS1"] = "$ "
+
+    output = io.StringIO()
+    child = spawn_ruyi(
+        "bash",
+        ["--noprofile", "--norc", "-i"],
+        env=shell_env,
+    )
+    child.logfile_read = output
+
+    try:
+        child.expect_exact("$ ")
+        child.sendline(f'eval "$({ruyi_exe} --output-completion-script=bash)"')
+        child.expect_exact("$ ")
+        child.send(f"{ruyi_exe} ")
+        child.send("\t\t")
+        child.expect_exact("admin")
+        child.send('\x03')  # Ctrl-C
+        child.expect_exact("$ ")
+        child.send(f"{ruyi_exe} --ver")
+        child.send("\t")
+        child.expect_exact(f"{ruyi_exe} --version")
+        child.send("\n")
+        child.expect_exact("Ruyi ")
+        child.expect_exact("$ ")
+    finally:
+        child.close()
+
+    completion_output = output.getvalue()
+    assert "bash:" not in completion_output
+    assert "cloning from" not in completion_output
