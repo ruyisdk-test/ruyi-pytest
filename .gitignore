@@ -22,6 +22,9 @@ var/
 wheels/
 share/python-wheels/
 *.egg-info/
+docx/
+.env
+poetry.lock
 .installed.cfg
 *.egg
 MANIFEST
@@ -50,7 +53,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
-
+report.html
 # Translations
 *.mo
 *.pot
