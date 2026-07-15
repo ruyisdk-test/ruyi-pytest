@@ -154,6 +154,75 @@ def test_ruyi_install(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str
     assert child.exitstatus == 1
 
 
+def test_ruyi_install_fetch_reinstall_and_alias(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
+    _ = bind_gettext(isolated_env, {
+        "zh_CN.UTF-8": {
+            r"info: downloading .*": r"信息：正在将 http.* 下载到 .*",
+            "fatal error: don't know how to handle non-binary package ruyisdk-demo":
+                "致命错误：不知道如何处理非二进制软件包 ruyisdk-demo",
+            r"info: extracting .* for package gnu-upstream-(\S+)": r"信息：正在为软件包 gnu-upstream-(\S+) 解压缩 ",
+            r"info: package .* installed to (\S+)": r"信息：软件包 .* 已安装到 (\S+)",
+            "info: skipping already installed package": "信息：跳过已安装的软件包 ",
+        },
+    })
+
+    ruyi_init_default_telemetry(ruyi_exe, isolated_env)
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["install", "-f", "ruyisdk-demo"],
+        env=isolated_env,
+        timeout=10 * 60,
+    )
+    try:
+        child.expect(_(r"info: downloading .*"))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+    assert not (Path(isolated_env["XDG_DATA_HOME"]) / "ruyi" / "binaries").exists()
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["install", "--reinstall", "ruyisdk-demo"],
+        env=isolated_env,
+    )
+    try:
+        child.expect_exact(_("fatal error: don't know how to handle non-binary package ruyisdk-demo"))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 2
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["i", "gnu-upstream"],
+        env=isolated_env,
+        timeout=10 * 60,
+    )
+    try:
+        child.expect(_(r"info: extracting .* for package gnu-upstream-(\S+)"))
+        child.expect(_(r"info: package .* installed to (\S+)"))
+        installed = Path(child.match.group(1))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+    assert installed.exists()
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["install", "gnu-upstream", "gnu-upstream"],
+        env=isolated_env,
+    )
+    try:
+        child.expect_exact(_("info: skipping already installed package"))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+
+
 def test_ruyi_install_host(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
     _ = bind_gettext(isolated_env, {
         "zh_CN.UTF-8": {
