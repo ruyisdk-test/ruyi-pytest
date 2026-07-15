@@ -35,3 +35,17 @@ def test_ruyi_version(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str
         child.close()
 
     assert child.exitstatus == 0
+
+    # ruyi version equivalents
+    for args in (["-V"], ["--version"], ["--porcelain", "version"]):
+        child = spawn_ruyi(
+            ruyi_exe,
+            list(args),
+            env=isolated_env,
+        )
+        try:
+            child.expect_exact("Ruyi ")
+            child.expect(pexpect.EOF)
+        finally:
+            child.close()
+        assert child.exitstatus == 0
