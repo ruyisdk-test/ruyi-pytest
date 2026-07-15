@@ -20,7 +20,7 @@ def test_ruyi_uninstall(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, s
             "info: uninstalling package ": "信息：正在卸载软件包 ",
             "info: package ": "信息：软件包 ",
             " uninstalled": " 已被卸载",
-            "Proceed?": "继续吗？",
+            r"Proceed\?": "继续吗？",
             "List of available packages:": "可用软件包列表：",
         },
     })
@@ -99,7 +99,7 @@ def test_ruyi_uninstall(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, s
     )
     try:
         child.expect_exact(_("info: the following packages will be uninstalled:"))
-        child.expect(_("Proceed?") + r" \(y/N\) ")
+        child.expect(_(r"Proceed\?") + r" \(y/N\) ")
         child.sendline("n")
         child.expect(pexpect.EOF)
     finally:
@@ -117,7 +117,7 @@ def test_ruyi_uninstall(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, s
     )
     try:
         child.expect_exact(_("info: the following packages will be uninstalled:"))
-        child.expect(_("Proceed?") + r" \(y/N\) ")
+        child.expect(_(r"Proceed\?") + r" \(y/N\) ")
         child.sendline("y")
         child.expect(_("info: uninstalling package ") + r".*gnu-upstream")
         child.expect(_("info: package ") + r".*gnu-upstream.*" + _(" uninstalled"))
