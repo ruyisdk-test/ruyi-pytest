@@ -97,3 +97,62 @@ def test_ruyi_extract(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str
     assert (test_path / "coremark-1.0.1").exists()
     assert (test_path / "coremark-1.0.1" / "README.md").exists()
     assert (test_path / "coremark-1.0.1" / "Makefile").exists()
+
+
+def test_ruyi_extract_options_and_errors(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
+    _ = bind_gettext(isolated_env, {
+        "zh_CN.UTF-8": {
+            r"info: extracting ruyisdk-demo-\S+ for package ruyisdk-demo-\S+":
+                r"信息：正在为软件包 ruyisdk-demo-\S+ 解压缩 ruyisdk-demo-\S+",
+            r"info: package ruyisdk-demo-\S+ has been extracted to (\S+)":
+                r"信息：软件包 ruyisdk-demo-\S+ 已被解压缩到 (\S+)",
+            "fatal error: atom nonexistent-pkg-foo matches no package in the repository":
+                "致命错误：atom nonexistent-pkg-foo 在仓库中未匹配到任何软件包",
+        },
+    })
+
+    ruyi_init_default_telemetry(ruyi_exe, isolated_env)
+
+    dest_dir = tmp_path / "dest"
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["extract", "-d", str(dest_dir), "ruyisdk-demo"],
+        env=isolated_env,
+        timeout=10 * 60,
+    )
+    try:
+        child.expect(_(r"info: extracting ruyisdk-demo-\S+ for package ruyisdk-demo-\S+"))
+        child.expect(_(r"info: package ruyisdk-demo-\S+ has been extracted to (\S+)"))
+        extracted = Path(child.match.group(1))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+    assert extracted.is_absolute()
+    assert extracted.is_dir()
+    assert dest_dir in extracted.parents
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["extract", "-f", "ruyisdk-demo"],
+        env=isolated_env,
+        timeout=10 * 60,
+        cwd=str(tmp_path),
+    )
+    try:
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["extract", "nonexistent-pkg-foo"],
+        env=isolated_env,
+    )
+    try:
+        child.expect_exact(_("fatal error: atom nonexistent-pkg-foo matches no package in the repository"))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 1
