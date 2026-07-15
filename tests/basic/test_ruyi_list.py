@@ -1,4 +1,5 @@
 
+import json
 import pexpect
 import platform
 import pytest
@@ -240,3 +241,60 @@ def test_ruyi_list_unavailable_pkg(ruyi_exe: str, ruyi_dep: bool, isolated_env: 
         child.close()
 
     assert child.exitstatus == 0
+
+
+def test_ruyi_list_contract_and_porcelain(ruyi_exe: str, isolated_env: Dict[str, str]):
+    _ = bind_gettext(isolated_env, {
+        "zh_CN.UTF-8": {
+            "fatal error: no filter specified for list operation":
+                "致命错误：未为 list 操作指定过滤器",
+            "info: for the old behavior of listing all packages, try ruyi list --all":
+                "信息：如果您意图唤起“列出所有软件包”这一旧版行为，请尝试 ruyi list --all",
+            "List of available packages:": "可用软件包列表：",
+        },
+    })
+
+    ruyi_init_default_telemetry(ruyi_exe, isolated_env)
+
+    child = spawn_ruyi(ruyi_exe, ["list"], env=isolated_env)
+    try:
+        child.expect_exact(_("fatal error: no filter specified for list operation"))
+        child.expect_exact(_("info: for the old behavior of listing all packages, try ruyi list --all"))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 1
+
+    child = spawn_ruyi(ruyi_exe, ["list", "--all"], env=isolated_env)
+    try:
+        child.expect_exact(_("List of available packages:"))
+        child.expect_exact("source/coremark")
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["--porcelain", "list", "--name-contains", "coremark"],
+        env=isolated_env,
+    )
+    try:
+        child.expect(pexpect.EOF)
+        records = [json.loads(line) for line in child.before.splitlines() if line]
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+    assert len(records) == 1
+    assert records[0]["ty"] == "pkglistoutput-v1"
+    assert records[0]["category"] == "source"
+    assert records[0]["name"] == "coremark"
+    assert records[0]["vers"]
+
+    child = spawn_ruyi(ruyi_exe, ["--porcelain", "list"], env=isolated_env)
+    try:
+        child.expect(pexpect.EOF)
+        assert child.before == ""
+    finally:
+        child.close()
+    assert child.exitstatus == 1

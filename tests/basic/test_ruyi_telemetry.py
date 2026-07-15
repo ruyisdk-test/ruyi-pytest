@@ -13,6 +13,12 @@ def test_ruyi_telemetry_modes(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[
             "info: telemetry data collection is now disabled": "信息：现已禁用遥测数据收集",
             "info: telemetry data uploading is now enabled": "信息：现已启用遥测数据上传",
             "info: telemetry mode is now set to local collection only": "信息：遥测模式现已设置为仅本地收集",
+            "info: telemetry mode is off: nothing is collected or uploaded after the first run":
+                "信息：遥测模式为 off：首次运行后，不会收集或上传任何内容",
+            "info: telemetry mode is local: local usage collection only, no usage uploads except if requested":
+                "信息：遥测模式为 local：仅本地使用收集，除非明确请求否则不会上传",
+            "info: telemetry mode is on: usage data is collected and periodically uploaded":
+                "信息：遥测模式为 on：使用数据会被收集并定期上传",
         },
     })
 
@@ -44,10 +50,26 @@ def test_ruyi_telemetry_modes(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[
         child.close()
     assert child.exitstatus == 0
 
+    child = spawn_ruyi(ruyi_exe, ["telemetry", "status", "--verbose"], env=isolated_env)
+    try:
+        child.expect_exact(_("info: telemetry mode is on: usage data is collected and periodically uploaded"))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+
     # optout: disable data collection (on → off, proves optout works)
     child = spawn_ruyi(ruyi_exe, ["telemetry", "optout"], env=isolated_env)
     try:
         child.expect_exact(_("info: telemetry data collection is now disabled"))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+
+    child = spawn_ruyi(ruyi_exe, ["telemetry", "status", "-v"], env=isolated_env)
+    try:
+        child.expect_exact(_("info: telemetry mode is off: nothing is collected or uploaded after the first run"))
         child.expect(pexpect.EOF)
     finally:
         child.close()
@@ -108,6 +130,14 @@ def test_ruyi_telemetry_modes(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[
     try:
         child.expect(pexpect.EOF)
         assert child.before.strip() == "local"
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+
+    child = spawn_ruyi(ruyi_exe, ["telemetry", "status", "--verbose"], env=isolated_env)
+    try:
+        child.expect_exact(_("info: telemetry mode is local: local usage collection only, no usage uploads except if requested"))
+        child.expect(pexpect.EOF)
     finally:
         child.close()
     assert child.exitstatus == 0

@@ -1,5 +1,6 @@
 
 import pexpect
+import pytest
 
 from pathlib import Path
 from typing import Callable, Dict, List, Union
@@ -23,13 +24,59 @@ def spawn_ruyi(
 
 
 def bind_gettext(env: Dict[str, str], catalog: Dict[str, Dict[str, str]]) -> Callable[[str], str]:
-    locale = env.get("LC_ALL") or env.get("LANG") or "en_US.UTF-8"
-    locale_map = catalog.get(locale) or catalog.get("en_US.UTF-8", {})
+    languages = ["en_US.UTF-8"]
+    for key in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
+        if value := env.get(key):
+            languages = value.split(":")
+            break
+
+    locale_map = catalog.get("en_US.UTF-8", {})
+    for locale in languages:
+        normalized_locale = f"{locale.split('.', 1)[0]}.UTF-8"
+        if candidate := catalog.get(locale) or catalog.get(normalized_locale):
+            locale_map = candidate
+            break
 
     def gettext(message: str) -> str:
         return locale_map.get(message, message)
 
     return gettext
+
+
+def env_with_blocked_network(env: Dict[str, str]) -> Dict[str, str]:
+    blocked_env = env.copy()
+    for key in (
+        "http_proxy",
+        "https_proxy",
+        "ftp_proxy",
+        "all_proxy",
+        "no_proxy",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "FTP_PROXY",
+        "ALL_PROXY",
+        "NO_PROXY",
+    ):
+        blocked_env.pop(key, None)
+
+    proxy = "http://127.0.0.1:1"
+    for key in ("http_proxy", "https_proxy", "all_proxy", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"):
+        blocked_env[key] = proxy
+    blocked_env["no_proxy"] = ""
+    blocked_env["NO_PROXY"] = ""
+    blocked_env["RUYI_OVERRIDE_FETCHER"] = "curl"
+    return blocked_env
+
+
+def xfail_known_ruyi_defect(
+    ruyi_version: str,
+    affected_versions: tuple[str, ...],
+    reason: str,
+) -> None:
+    assert ruyi_version in affected_versions, (
+        f"known defect observed on unlisted Ruyi version {ruyi_version}: {reason}"
+    )
+    pytest.xfail(f"Ruyi {ruyi_version}: {reason}")
 
 
 def ruyi_config_iscas_mirror(key: str, env: dict[str, str]):

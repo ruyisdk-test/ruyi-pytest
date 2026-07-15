@@ -8,10 +8,10 @@ dependencies = []
 
 [dependency-groups]
 dev = [
+    "packaging>=24.0",
     "pexpect>=4.9.0",
     "pytest>=9.0.3",
     "pytest-env>=1.6.0",
-    "ruyi>=0.51.0b20260714",
 ]
 
 [tool.pytest.ini_options]

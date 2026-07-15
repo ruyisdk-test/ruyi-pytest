@@ -1,9 +1,13 @@
+import hashlib
+import json
 import pexpect
+import tomllib
+import zipfile
 
 from pathlib import Path
 from typing import Dict
 
-from tests.helpers import ruyi_init_default_telemetry, spawn_ruyi
+from tests.helpers import bind_gettext, ruyi_init_default_telemetry, spawn_ruyi
 
 
 def test_ruyi_admin(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path):
@@ -193,6 +197,14 @@ def test_ruyi_admin_default_strip_components(ruyi_exe: str, isolated_env: Dict[s
 
 
 def test_ruyi_admin_build_package(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path):
+    _ = bind_gettext(isolated_env, {
+        "zh_CN.UTF-8": {
+            "fatal error: invalid --var spec 'invalid': expected KEY=VALUE":
+                "致命错误：无效的 --var 规范 'invalid'：预期格式为 KEY=VALUE",
+            "fatal error: invalid --var spec '=value': empty key":
+                "致命错误：无效的 --var 规范 '=value'：键为空",
+        },
+    })
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
 
     recipe = tmp_path / "recipe.star"
@@ -209,6 +221,22 @@ def test_ruyi_admin_build_package(ruyi_exe: str, isolated_env: Dict[str, str], t
     finally:
         child.close()
     assert child.exitstatus == 1
+
+    for spec, message in (
+        ("invalid", "fatal error: invalid --var spec 'invalid': expected KEY=VALUE"),
+        ("=value", "fatal error: invalid --var spec '=value': empty key"),
+    ):
+        child = spawn_ruyi(
+            ruyi_exe,
+            ["admin", "build-package", "--var", spec, str(recipe)],
+            env=isolated_env,
+        )
+        try:
+            child.expect_exact(_(message))
+            child.expect(pexpect.EOF)
+        finally:
+            child.close()
+        assert child.exitstatus == 1
 
 
 def test_ruyi_admin_run_plugin_cmd(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path):
@@ -286,3 +314,153 @@ def test_ruyi_admin_issue430(ruyi_exe: str, isolated_env: Dict[str, str], tmp_pa
 
     assert "" in lines
     assert "strip_components = 0" in lines
+
+
+def test_ruyi_admin_checksum_options(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path):
+    _ = bind_gettext(isolated_env, {
+        "zh_CN.UTF-8": {
+            "fatal error: invalid restrict kinds given: ['invalid']":
+                "致命错误：给出了无效的 restrict 类型：['invalid']",
+        },
+    })
+    ruyi_init_default_telemetry(ruyi_exe, isolated_env)
+
+    payload_dir = tmp_path / "payload files"
+    payload_dir.mkdir()
+    first = payload_dir / "first.bin"
+    second = payload_dir / "second.bin"
+    first.write_bytes(b"first payload\n")
+    second.write_bytes(b"second payload\n")
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        [
+            "admin", "checksum", "-f", "toml", "--restrict", "fetch,mirror",
+            str(first), str(second),
+        ],
+        env=isolated_env,
+    )
+    try:
+        child.expect(pexpect.EOF)
+        data = tomllib.loads(child.before)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+    assert len(data["distfiles"]) == 2
+    assert data["distfiles"][0]["name"] == first.name
+    assert data["distfiles"][0]["size"] == first.stat().st_size
+    assert data["distfiles"][0]["restrict"] == ["fetch", "mirror"]
+    assert data["distfiles"][0]["checksums"]["sha256"] == hashlib.sha256(first.read_bytes()).hexdigest()
+    assert data["distfiles"][0]["checksums"]["sha512"] == hashlib.sha512(first.read_bytes()).hexdigest()
+    assert data["distfiles"][1]["name"] == second.name
+
+    archive = tmp_path / "payload.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("a.txt", b"abc")
+        zf.writestr("nested/b.txt", b"12345")
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["admin", "checksum", "--install-size", str(archive)],
+        env=isolated_env,
+    )
+    try:
+        child.expect_exact("#   install_size = 8")
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["admin", "checksum", "--restrict", "invalid", str(first)],
+        env=isolated_env,
+    )
+    try:
+        child.expect_exact(_("fatal error: invalid restrict kinds given: ['invalid']"))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 1
+
+
+def test_ruyi_admin_check_repo_and_porcelain(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path):
+    ruyi_init_default_telemetry(ruyi_exe, isolated_env)
+
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / "config.toml").write_text(
+        'ruyi-repo = "v1"\n\n'
+        '[[mirrors]]\n'
+        'id = "test"\n'
+        'urls = ["https://example.invalid/dist/"]\n',
+        encoding="utf-8",
+    )
+
+    malformed = repo_root / "packages" / "source" / "ignored" / "1.0.0.toml"
+    malformed.parent.mkdir(parents=True)
+    malformed.write_text('format = "v1"\n[', encoding="utf-8")
+
+    selected = repo_root / "packages" / "board-image" / "selected" / "1.0.0.toml"
+    selected.parent.mkdir(parents=True)
+    selected.write_text(
+        'format = "v1"\n\n'
+        '[[distfiles]]\n'
+        'size = 0\n'
+        'name = "src.tar.zst"\n\n'
+        '[distfiles.checksums]\n'
+        f'sha256 = "{"0" * 64}"\n\n'
+        '[metadata]\n'
+        'vendor = { eula = "", name = "Test Vendor" }\n'
+        'desc = "Test package"\n\n'
+        '[source]\n'
+        'distfiles = ["src.tar.zst"]\n',
+        encoding="utf-8",
+    )
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        [
+            "admin", "check", "--repo", str(repo_root),
+            "--only-packages", "--category-is", "board-image",
+        ],
+        env=isolated_env,
+    )
+    try:
+        child.expect(pexpect.EOF)
+        output = child.before
+    finally:
+        child.close()
+    assert child.exitstatus == 1
+    assert "RYC0001" in output
+    assert str(selected) in output
+    assert str(malformed) not in output
+    assert "RYC0002" not in output
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["--porcelain", "admin", "check", "--file", str(selected)],
+        env=isolated_env,
+    )
+    try:
+        child.expect(pexpect.EOF)
+        records = [json.loads(line) for line in child.before.splitlines() if line]
+    finally:
+        child.close()
+    assert child.exitstatus == 1
+    assert len(records) == 1
+    assert records[0]["ty"] == "checkdiagnostic-v1"
+    assert records[0]["code"] == "RYC0001"
+    assert records[0]["check"] == "format"
+    assert records[0]["path"] == str(selected)
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["admin", "check", "--file", str(selected), "--repo", str(repo_root)],
+        env=isolated_env,
+    )
+    try:
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 2
