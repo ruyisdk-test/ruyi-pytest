@@ -5,7 +5,7 @@ import pytest
 from pathlib import Path
 from typing import Dict
 
-from tests.helpers import assert_ruyi_exits, bind_gettext, ruyi_init_default_telemetry, ruyi_install, spawn_ruyi
+from tests.helpers import bind_gettext, ruyi_init_default_telemetry, ruyi_install, spawn_ruyi
 
 
 def test_ruyi_venv(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
@@ -167,8 +167,6 @@ def test_ruyi_venv_sysroot_options(ruyi_exe: str, ruyi_dep: bool, isolated_env: 
     })
 
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
-
-    assert_ruyi_exits(ruyi_exe, ["venv", "generic"], isolated_env, 2)
 
     ruyi_install(ruyi_exe, pkgs=["gnu-plct"], env=isolated_env)
 

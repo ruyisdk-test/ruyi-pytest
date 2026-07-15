@@ -2,7 +2,7 @@ import pexpect
 
 from typing import Dict
 
-from tests.helpers import assert_ruyi_exits, bind_gettext, ruyi_init_default_telemetry, spawn_ruyi
+from tests.helpers import bind_gettext, ruyi_init_default_telemetry, spawn_ruyi
 
 
 def test_ruyi_repo(ruyi_exe: str, isolated_env: Dict[str, str]):
