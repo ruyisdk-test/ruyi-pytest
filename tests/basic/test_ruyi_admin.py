@@ -64,6 +64,32 @@ def test_ruyi_admin(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path)
         + output,
         encoding="utf-8",
     )
+
+    # ruyi admin check -f "$tmp_path"/test.toml --check parse --check format
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["admin", "check", "-f", str(test_toml), "--check", "parse", "--check", "format"],
+        env=isolated_env,
+    )
+    try:
+        child.expect_exact("error RYC0001: manifest is not canonical")
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 1
+
+    # ruyi admin check -f "$tmp_path"/test.toml --check parse
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["admin", "check", "-f", str(test_toml), "--check", "parse"],
+        env=isolated_env,
+    )
+    try:
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+
     # ruyi admin format-manifest "$tmp_path"/test.toml
     child = spawn_ruyi(
         ruyi_exe,
@@ -92,6 +118,18 @@ def test_ruyi_admin(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path)
     assert lines[10] == "[distfiles.checksums]"
     assert lines[11].startswith("sha256 = ")
     assert lines[12].startswith("sha512 = ")
+
+    # ruyi admin check -f "$tmp_path"/test.toml
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["admin", "check", "-f", str(test_toml)],
+        env=isolated_env,
+    )
+    try:
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
 
 
 def test_ruyi_admin_default_strip_components(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path):
@@ -152,6 +190,41 @@ def test_ruyi_admin_default_strip_components(ruyi_exe: str, isolated_env: Dict[s
 
     assert "" in lines
     assert "strip_components = 1" not in lines
+
+
+def test_ruyi_admin_build_package(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path):
+    ruyi_init_default_telemetry(ruyi_exe, isolated_env)
+
+    recipe = tmp_path / "recipe.star"
+    recipe.write_text("not valid starlark\n", encoding="utf-8")
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["admin", "build-package", "--dry-run", str(recipe)],
+        env=isolated_env,
+    )
+    try:
+        child.expect_exact("ruyi-build-recipes.toml")
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 1
+
+
+def test_ruyi_admin_run_plugin_cmd(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path):
+    ruyi_init_default_telemetry(ruyi_exe, isolated_env)
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["admin", "run-plugin-cmd", "no-such-cmd"],
+        env=isolated_env,
+    )
+    try:
+        child.expect_exact("FileNotFoundError")
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 1
 
 
 def test_ruyi_admin_issue430(ruyi_exe: str, isolated_env: Dict[str, str], tmp_path: Path):
