@@ -8,8 +8,8 @@ from tests.helpers import bind_gettext, ruyi_init_default_telemetry, spawn_ruyi
 def test_ruyi_repo(ruyi_exe: str, isolated_env: Dict[str, str]):
     _ = bind_gettext(isolated_env, {
         "zh_CN.UTF-8": {
-            "fatal error: 'ruyisdk' is reserved; use  config to configure the default repositor":
-                "致命错误：'ruyisdk' 是保留的；请使用  配置来配置默认仓库",
+            "fatal error: 'ruyisdk' is reserved; use [repo] config to configure the default repositor":
+                "致命错误：'ruyisdk' 是保留的；请使用 [repo] 配置来配置默认仓库",
             "info: repo 'ruyi-addons-loongson' added; run 'ruyi update' to sync":
                 "信息：已添加软件包仓库 'ruyi-addons-loongson'；运行 'ruyi update' 以同步",
             "info: syncing repo 'ruyisdk'": "信息：正在同步仓库 'ruyisdk'",
@@ -44,7 +44,7 @@ def test_ruyi_repo(ruyi_exe: str, isolated_env: Dict[str, str]):
         env=isolated_env,
     )
     try:
-        child.expect_exact(_("fatal error: 'ruyisdk' is reserved; use  config to configure the default repositor"))
+        child.expect_exact(_("fatal error: 'ruyisdk' is reserved; use [repo] config to configure the default repositor"))
         child.expect(pexpect.EOF)
     finally:
         child.close()
@@ -162,7 +162,9 @@ def test_ruyi_repo_default(ruyi_exe: str, isolated_env: Dict[str, str]):
             "fatal error: no repo with id 'ruyisdk' found in user config":
                 "致命错误：在用户配置中未找到 ID 为 'ruyisdk' 的软件包仓库",
             "fatal error: cannot remove the default repo 'ruyisdk'; use 'repo disable' instead":
-                "致命错误：无法移除默认仓库 'ruyisdk'；请使用 'repo disable' 来禁用它"
+                "致命错误：无法移除默认仓库 'ruyisdk'；请使用 'repo disable' 来禁用它",
+            "info: repo 'ruyisdk' enabled": "信息：已启用软件包仓库 'ruyisdk'",
+            "info: repo 'ruyisdk' disabled": "信息：已禁用软件包仓库 'ruyisdk'"
         },
     })
 
@@ -201,7 +203,7 @@ def test_ruyi_repo_default(ruyi_exe: str, isolated_env: Dict[str, str]):
         timeout=60,
     )
     try:
-        child.expect_exact(_("fatal error: no repo with id 'ruyisdk' found in user config"))
+        child.expect_exact(_("info: repo 'ruyisdk' disabled"))
         child.expect(pexpect.EOF)
     finally:
         child.close()
@@ -214,7 +216,7 @@ def test_ruyi_repo_default(ruyi_exe: str, isolated_env: Dict[str, str]):
         timeout=60,
     )
     try:
-        child.expect_exact(_("fatal error: no repo with id 'ruyisdk' found in user config"))
+        child.expect_exact(_("info: repo 'ruyisdk' enabled"))
         child.expect(pexpect.EOF)
     finally:
         child.close()
