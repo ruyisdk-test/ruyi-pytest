@@ -15,6 +15,7 @@ def test_ruyi_news(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
             "RuyiSDK now supports displaying news": "RuyiSDK 支持展示新闻了",
             "You can read them with ruyi news read.": "您可以使用 ruyi news read 阅读它们",
             "Thank you for supporting RuyiSDK!": "感谢您对 RuyiSDK 的支持！",
+            "fatal error: there is no news item with ordinal 999999999": "致命错误：没有序号为 999999999 的新闻条目",
             "# Release notes": "# RuyiSDK 0.37 版本更新说明",
             "  (no unread item)": "  （无未读条目）",
         },
@@ -80,6 +81,20 @@ def test_ruyi_news(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
         child.close()
 
     assert child.exitstatus == 0
+
+    # ruyi news read 999999999
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["news", "read", "999999999"],
+        env=isolated_env,
+    )
+    try:
+        child.expect_exact(_("fatal error: there is no news item with ordinal 999999999"))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+
+    assert child.exitstatus == 1
 
     # ruyi news list --new
     child = spawn_ruyi(
