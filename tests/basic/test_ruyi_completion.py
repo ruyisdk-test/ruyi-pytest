@@ -1,6 +1,7 @@
 import pexpect
 import io
 
+from pathlib import Path
 from typing import Dict
 
 from tests.helpers import bind_gettext, ruyi_init_default_telemetry, spawn_ruyi
@@ -45,6 +46,20 @@ def test_ruyi_output_completion_script(ruyi_exe: str, isolated_env: Dict[str, st
 
     child = spawn_ruyi(
         ruyi_exe,
+        ["--output-completion-script", "bash"],
+        env=isolated_env,
+    )
+    try:
+        child.expect_exact("#compdef ruyi")
+        child.expect_exact("_python_argcomplete_ruyi")
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+
+    assert child.exitstatus == 0
+
+    child = spawn_ruyi(
+        ruyi_exe,
         ["--output-completion-script=zsh"],
         env=isolated_env,
     )
@@ -69,6 +84,7 @@ def test_ruyi_output_completion_script(ruyi_exe: str, isolated_env: Dict[str, st
         child.close()
 
     assert child.exitstatus == 1
+    assert not (Path(isolated_env["XDG_STATE_HOME"]) / "ruyi" / "telemetry").exists()
 
 
 def test_ruyi_completion_issue452(ruyi_exe: str, isolated_env: Dict[str, str]):

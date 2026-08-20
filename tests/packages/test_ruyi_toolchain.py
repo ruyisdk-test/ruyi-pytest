@@ -50,8 +50,9 @@ def test_ruyi_toolchain_gnu_plct_xthead(ruyi_exe: str, ruyi_build_dep: bool, iso
     child = spawn_ruyi(
         "bash",
         [
-            "-c",
-            f'''
+             "-c",
+             f'''
+set -e
 source "{venv_path}/bin/ruyi-activate"
 sed -i 's/\\bgcc\\b/riscv64-plctxthead-linux-gnu-gcc/g' linux64/core_portme.mak
 make PORT_DIR=linux64 link
@@ -74,12 +75,15 @@ ruyi-deactivate
     finally:
         child.close()
 
+    assert child.exitstatus == 0
+
     if platform.machine() == "x86_64":
         child = spawn_ruyi(
             "bash",
             [
                 "-c",
                 f'''
+set -e
 source "{venv_path}/bin/ruyi-activate"
 ruyi-qemu ./coremark.exe
 ruyi-deactivate
@@ -100,6 +104,8 @@ ruyi-deactivate
             output = child.before
         finally:
             child.close()
+
+        assert child.exitstatus == 0
 
 
 @pytest.mark.skipif(platform.machine() != "x86_64", reason="x86_64 only")

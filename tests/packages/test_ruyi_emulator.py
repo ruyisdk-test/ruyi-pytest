@@ -362,7 +362,7 @@ def test_hello_elf_riscv64(isolated_env: Dict[str, str], tmp_path: Path):
     """
 
     hello_elf = tmp_path / "hello-riscv64"
-    write_hello_elf_x86_64(hello_elf)
+    write_hello_elf_riscv64(hello_elf)
 
     child = spawn_ruyi(
         str(hello_elf),

@@ -108,6 +108,8 @@ def test_ruyi_extract_options_and_errors(ruyi_exe: str, ruyi_dep: bool, isolated
                 r"信息：软件包 ruyisdk-demo-\S+ 已被解压缩到 (\S+)",
             "fatal error: atom nonexistent-pkg-foo matches no package in the repository":
                 "致命错误：atom nonexistent-pkg-foo 在仓库中未匹配到任何软件包",
+            r"fatal error: package gnu-upstream-\S+ declares no distfile for host linux/no-such-arch":
+                r"致命错误：软件包 gnu-upstream-\S+ 未为主机 linux/no-such-arch 声明分发文件",
         },
     })
 
@@ -134,7 +136,7 @@ def test_ruyi_extract_options_and_errors(ruyi_exe: str, ruyi_dep: bool, isolated
 
     child = spawn_ruyi(
         ruyi_exe,
-        ["extract", "-f", "ruyisdk-demo"],
+        ["extract", "-f", "--dest-dir", str(tmp_path / "fetch-only"), "ruyisdk-demo"],
         env=isolated_env,
         timeout=10 * 60,
         cwd=str(tmp_path),
@@ -144,6 +146,21 @@ def test_ruyi_extract_options_and_errors(ruyi_exe: str, ruyi_dep: bool, isolated
     finally:
         child.close()
     assert child.exitstatus == 0
+    fetch_only_dir = tmp_path / "fetch-only"
+    assert fetch_only_dir.is_dir()
+    assert not any(path.is_file() for path in fetch_only_dir.rglob("*"))
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["extract", "--host", "no-such-arch", "gnu-upstream"],
+        env=isolated_env,
+    )
+    try:
+        child.expect(_(r"fatal error: package gnu-upstream-\S+ declares no distfile for host linux/no-such-arch"))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 2
 
     child = spawn_ruyi(
         ruyi_exe,

@@ -20,8 +20,10 @@ def test_ruyi_uninstall(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, s
             "info: uninstalling package ": "信息：正在卸载软件包 ",
             "info: package ": "信息：软件包 ",
             " uninstalled": " 已被卸载",
-            r"Proceed\?": "继续吗？",
+            "Proceed?": "继续吗？",
             "List of available packages:": "可用软件包列表：",
+            r"info: skipping not-installed package gnu-upstream-\S+":
+                r"信息：跳过未安装的软件包 gnu-upstream-\S+",
         },
     })
 
@@ -78,6 +80,19 @@ def test_ruyi_uninstall(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, s
     assert child.exitstatus == 0
     assert Path(install_dir).exists()
 
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["uninstall", "--host", "no-such-arch", "-y", "gnu-upstream"],
+        env=isolated_env,
+    )
+    try:
+        child.expect(_(r"info: skipping not-installed package gnu-upstream-\S+"))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+    assert Path(install_dir).exists()
+
     # Verify package shows as installed via ruyi list
     child = spawn_ruyi(
         ruyi_exe,
@@ -99,7 +114,7 @@ def test_ruyi_uninstall(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, s
     )
     try:
         child.expect_exact(_("info: the following packages will be uninstalled:"))
-        child.expect(_(r"Proceed\?") + r" \(y/N\) ")
+        child.expect_exact(_("Proceed?") + " (y/N) ")
         child.sendline("n")
         child.expect(pexpect.EOF)
     finally:
@@ -117,7 +132,7 @@ def test_ruyi_uninstall(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, s
     )
     try:
         child.expect_exact(_("info: the following packages will be uninstalled:"))
-        child.expect(_(r"Proceed\?") + r" \(y/N\) ")
+        child.expect_exact(_("Proceed?") + " (y/N) ")
         child.sendline("y")
         child.expect(_("info: uninstalling package ") + r".*gnu-upstream")
         child.expect(_("info: package ") + r".*gnu-upstream.*" + _(" uninstalled"))

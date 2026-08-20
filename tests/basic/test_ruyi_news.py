@@ -1,3 +1,4 @@
+import json
 import pexpect
 
 from typing import Dict
@@ -22,6 +23,32 @@ def test_ruyi_news(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
     })
 
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
+
+    child = spawn_ruyi(ruyi_exe, ["news"], env=isolated_env)
+    try:
+        child.expect_exact(_(" new news item(s):"))
+        child.expect_exact("2024-01-14-ruyi-news")
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["--porcelain", "news", "list", "--new"],
+        env=isolated_env,
+    )
+    try:
+        child.expect(pexpect.EOF)
+        records = [json.loads(line) for line in child.before.splitlines() if line]
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+    first_news = next(record for record in records if record["id"] == "2024-01-14-ruyi-news")
+    assert first_news["ty"] == "newsitem-v1"
+    assert first_news["ord"] == 1
+    assert first_news["is_read"] is False
+    assert {content["lang"] for content in first_news["langs"]} >= {"en_US", "zh_CN"}
 
     # ruyi update
     child = spawn_ruyi(
@@ -65,6 +92,18 @@ def test_ruyi_news(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
     finally:
         child.close()
 
+    assert child.exitstatus == 0
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["news", "read", "--quiet", "2024-01-14-ruyi-news"],
+        env=isolated_env,
+    )
+    try:
+        child.expect(pexpect.EOF)
+        assert child.before == ""
+    finally:
+        child.close()
     assert child.exitstatus == 0
 
     # ruyi news read 1

@@ -1,13 +1,21 @@
 
 import hashlib
+import platform
 import pexpect
+import pytest
 import time
 import urllib.request
 
 from pathlib import Path
 from typing import Dict
 
-from tests.helpers import bind_gettext, ruyi_init_default_telemetry, spawn_ruyi
+from tests.helpers import (
+    bind_gettext,
+    env_with_blocked_network,
+    ruyi_init_default_telemetry,
+    spawn_ruyi,
+    xfail_known_ruyi_defect,
+)
 
 
 def test_ruyi_install(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
@@ -23,6 +31,8 @@ def test_ruyi_install(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str
             r"info: extracting .* for package gnu-upstream-(\S+)": r"信息：正在为软件包 gnu-upstream-(\S+) 解压缩 ",
             r"info: package .* installed to (\S+)": r"信息：软件包 .* 已安装到 (\S+)",
             "info: skipping already installed package": "信息：跳过已安装的软件包 ",
+            r"warn: package gnu-upstream-\S+ seems already installed; purging and re-installing due to --reinstall":
+                r"警告：软件包 gnu-upstream-\S+ 似乎已安装；由于传入了 --reinstall，将移除并重新安装它",
             "fatal error: atom gnu-upstream(>": "致命错误：atom gnu-upstream(>",
             ") matches no package in the repository": ") 在仓库中未匹配到任何软件包",
         },
@@ -30,9 +40,7 @@ def test_ruyi_install(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str
 
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
 
-    failed_env = isolated_env.copy()
-    failed_env["http_proxy"] = "http://0.0.0.0"
-    failed_env["https_proxy"] = "http://0.0.0.0"
+    failed_env = env_with_blocked_network(isolated_env)
     # ruyi install with proxy
     child = spawn_ruyi(
         ruyi_exe,
@@ -75,7 +83,29 @@ def test_ruyi_install(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str
 
     assert child.exitstatus == 0
     assert installed.exists()
-    assert (installed / "bin").exists()
+    binary_root = Path(isolated_env["XDG_DATA_HOME"]) / "ruyi" / "binaries"
+    assert installed.resolve().is_relative_to(binary_root.resolve())
+
+    sentinel = installed / "reinstall-sentinel"
+    sentinel.write_text("remove me\n", encoding="utf-8")
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["install", "--reinstall", "gnu-upstream"],
+        env=isolated_env,
+        timeout=10 * 60,
+    )
+    try:
+        child.expect(_(r"warn: package gnu-upstream-\S+ seems already installed; purging and re-installing due to --reinstall"))
+        child.expect(_(r"info: package .* installed to (\S+)"))
+        reinstalled = Path(child.match.group(1))
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+    assert reinstalled == installed
+    assert reinstalled.exists()
+    assert (reinstalled / "bin").exists()
+    assert not sentinel.exists()
     assert (installed / "toolchain.cmake").exists()
 
     # again: ruyi install gnu-upstream
@@ -154,7 +184,12 @@ def test_ruyi_install(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str
     assert child.exitstatus == 1
 
 
-def test_ruyi_install_fetch_reinstall_and_alias(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
+def test_ruyi_install_fetch_reinstall_and_alias(
+    ruyi_exe: str,
+    ruyi_dep: bool,
+    isolated_env: Dict[str, str],
+    tmp_path: Path,
+):
     _ = bind_gettext(isolated_env, {
         "zh_CN.UTF-8": {
             r"info: downloading .*": r"信息：正在将 http.* 下载到 .*",
@@ -173,6 +208,7 @@ def test_ruyi_install_fetch_reinstall_and_alias(ruyi_exe: str, ruyi_dep: bool, i
         ["install", "-f", "ruyisdk-demo"],
         env=isolated_env,
         timeout=10 * 60,
+        cwd=str(tmp_path),
     )
     try:
         child.expect(_(r"info: downloading .*"))
@@ -221,6 +257,54 @@ def test_ruyi_install_fetch_reinstall_and_alias(ruyi_exe: str, ruyi_dep: bool, i
     finally:
         child.close()
     assert child.exitstatus == 0
+
+
+@pytest.mark.skipif(
+    platform.machine() not in {"aarch64", "riscv64", "x86_64"},
+    reason="board-util/wlink has no binary for this host",
+)
+def test_ruyi_install_binary_fetch_only_has_no_install_state(
+    ruyi_exe: str,
+    ruyi_version: str,
+    ruyi_dep: bool,
+    isolated_env: Dict[str, str],
+):
+    ruyi_init_default_telemetry(ruyi_exe, isolated_env)
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["install", "--fetch-only", "board-util/wlink"],
+        env=isolated_env,
+        timeout=10 * 60,
+    )
+    try:
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+
+    binary_root = Path(isolated_env["XDG_DATA_HOME"]) / "ruyi" / "binaries"
+    install_roots = list(binary_root.glob("*/wlink-*")) if binary_root.exists() else []
+
+    child = spawn_ruyi(
+        ruyi_exe,
+        ["list", "--name-contains", "wlink", "--is-installed", "y"],
+        env=isolated_env,
+    )
+    try:
+        child.expect(pexpect.EOF)
+        assert "board-util/wlink" not in child.before
+    finally:
+        child.close()
+    assert child.exitstatus == 0
+    if install_roots:
+        assert all(path.is_dir() and not any(path.iterdir()) for path in install_roots)
+        xfail_known_ruyi_defect(
+            ruyi_version,
+            ("0.50.0-beta.20260623", "0.51.0-alpha.20260616"),
+            "binary install --fetch-only creates an empty installation root",
+        )
+    assert not install_roots
 
 
 def test_ruyi_install_host(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
