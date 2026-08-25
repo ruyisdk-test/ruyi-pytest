@@ -22,6 +22,20 @@ def spawn_ruyi(
     )
 
 
+def spawn_ruyi_to_eof(
+    ruyi_bin: str,
+    args: List[str],
+    env: Dict[str, str],
+    timeout: int = 60,
+) -> int | None:
+    child = spawn_ruyi(ruyi_bin, args, env=env, timeout=timeout)
+    try:
+        child.expect(pexpect.EOF)
+    finally:
+        child.close()
+    return child.exitstatus
+
+
 def bind_gettext(env: Dict[str, str], catalog: Dict[str, Dict[str, str]]) -> Callable[[str], str]:
     locale = env.get("LC_ALL") or env.get("LANG") or "en_US.UTF-8"
     locale_map = catalog.get(locale) or catalog.get("en_US.UTF-8", {})
@@ -63,7 +77,7 @@ def ruyi_init_default_telemetry(ruyi_bin: str, env: Dict[str, str]):
         ruyi_bin,
         ["update"],
         env=myenv,
-        timeout=60
+        timeout=60,
     )
 
     try:

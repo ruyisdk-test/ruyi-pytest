@@ -95,7 +95,7 @@ Covered command areas:
 | Extract | `tests/basic/test_ruyi_extract.py` | default/subdirless extraction, destination, fetch-only side effects, host error, nonexistent package |
 | List | `tests/basic/test_ruyi_list.py` | no-filter contract, `--all`, verbose/details, installed/category/name filters, unavailable packages, porcelain JSONL, profiles |
 | Venv | `tests/basic/test_ruyi_venv.py` | GNU/LLVM/emulator venvs, activation/name/deactivation, compilation/execution, all sysroot modes, option validation, canonical package sysroot option, real extra command via `wlink` |
-| Self | `tests/basic/test_ruyi_self.py` | every clean selector, quiet mode, external-repo protection, `--all`, safe cancellation or installation-form rejection of normal and `--purge` uninstall |
+| Self | `tests/basic/test_ruyi_self.py` | every clean selector, quiet mode, external-repo protection, isolated `--all`, automatic same-version standalone uninstall with and without `--purge` |
 | Device | `tests/basic/test_ruyi_device.py` | help, `flash` alias, wizard stages, concrete invalid-selection diagnostics, cancellation, interrupt and download-failure safety contracts; never real flashing |
 | Toolchain packages | `tests/packages/test_ruyi_toolchain.py` | selected toolchain installation, venv creation, compilation, object inspection, qemu execution where applicable |
 | Emulator packages | `tests/packages/test_ruyi_emulator.py` | selected emulator packages, generated ELF execution, qemu/binfmt-style behavior where applicable |
@@ -148,7 +148,7 @@ Five tests retain behavior-scoped handling for defects confirmed in older Ruyi 0
 The suite intentionally does not fully exercise some paths:
 
 - Real `device provision` flashing or disk writing is not performed.
-- Real `ruyi self uninstall -y` is not performed because it can remove the `ruyi` binary. The normal and `--purge` forms are covered through safe cancellation for standalone binaries and safe rejection for externally managed or non-standalone binaries.
+- `self uninstall` is never run against the `ruyi` executable from `PATH`; only pytest-temporary copies of the automatically downloaded same-version standalone artifact are removed.
 - Successful `admin build-package` and successful plugin command execution are not covered because they require dedicated recipe/plugin fixtures.
 - The suite does not attempt a Cartesian product of all packages, profiles, hosts, and argument combinations. It covers representative paths for each command area instead.
 - Full network failure matrices, corrupted cache recovery, and corrupted repository recovery are not exhaustively tested.
@@ -160,6 +160,6 @@ When adding tests:
 - Prefer isolated environments through the existing `isolated_env` fixture.
 - Keep tests locale-aware when asserting translated output.
 - Avoid root-only behavior and avoid modifying files outside the project directory, except pytest temporary directories.
-- Do not run destructive `self uninstall` paths against the `ruyi` binary from `PATH`; test only safe cancellation or isolated behavior.
+- Do not run destructive `self uninstall` paths against the `ruyi` binary from `PATH`; use only pytest-temporary copies of the verified standalone artifact.
 - Mark known upstream defects only after verifying unaffected behavior, and keep an explicit affected-version allowlist so newer Ruyi versions must either pass or surface a regression.
 - Prefer representative command paths over combinatorial argument matrices.
