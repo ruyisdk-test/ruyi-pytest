@@ -1,5 +1,6 @@
 
 import pexpect
+import pytest
 
 from pathlib import Path
 from typing import Callable, Dict, List, Union
@@ -44,6 +45,17 @@ def bind_gettext(env: Dict[str, str], catalog: Dict[str, Dict[str, str]]) -> Cal
         return locale_map.get(message, message)
 
     return gettext
+
+
+def xfail_known_ruyi_defect(
+    ruyi_version: str,
+    affected_versions: tuple[str, ...],
+    reason: str,
+) -> None:
+    assert ruyi_version in affected_versions, (
+        f"known defect observed on unlisted Ruyi version {ruyi_version}: {reason}"
+    )
+    pytest.xfail(f"Ruyi {ruyi_version}: {reason}")
 
 
 def ruyi_config_iscas_mirror(key: str, env: dict[str, str]):
