@@ -3,12 +3,17 @@ import pexpect
 import platform
 import pytest
 import re
+import sys
 
 from typing import Dict
 
 from tests.helpers import bind_gettext, ruyi_init_default_telemetry, ruyi_install, spawn_ruyi
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="gnu-plct-xthead has no macOS artifact",
+)
 def test_ruyi_list(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
     _ = bind_gettext(isolated_env, {
         "zh_CN.UTF-8": {

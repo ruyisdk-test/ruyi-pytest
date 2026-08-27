@@ -1,5 +1,7 @@
 
 import pexpect
+import pytest
+import sys
 
 from pathlib import Path
 from typing import Dict
@@ -7,6 +9,10 @@ from typing import Dict
 from tests.helpers import bind_gettext, ruyi_init_default_telemetry, spawn_ruyi
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="gnu-upstream has no macOS artifact",
+)
 def test_ruyi_uninstall(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
     """Test `ruyi uninstall` command: nonexistent package, interactive cancel/confirm, re-uninstall already removed package."""
     _ = bind_gettext(isolated_env, {
@@ -161,6 +167,10 @@ def test_ruyi_uninstall(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, s
     assert child.exitstatus == 1
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="gnu-upstream has no macOS artifact",
+)
 def test_ruyi_uninstall_assume_yes(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
     """Test `ruyi uninstall -y` and `remove`/`rm` aliases for non-interactive uninstall."""
     _ = bind_gettext(isolated_env, {

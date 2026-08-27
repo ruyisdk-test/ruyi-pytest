@@ -1,6 +1,7 @@
 import platform
 import pexpect
 import pytest
+import sys
 
 from pathlib import Path
 from typing import Dict
@@ -8,6 +9,10 @@ from typing import Dict
 from tests.helpers import bind_gettext, ruyi_init_default_telemetry, ruyi_install, spawn_ruyi
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="gnu-plct-xthead has no macOS artifact",
+)
 def test_ruyi_toolchain_gnu_plct_xthead(ruyi_exe: str, ruyi_build_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
     pkgs = ["gnu-plct-xthead", ]
     cmd = ["venv", "-t", "gnu-plct-xthead", ]
@@ -102,6 +107,10 @@ ruyi-deactivate
             child.close()
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="Milk-V toolchain packages have no macOS artifacts",
+)
 @pytest.mark.skipif(platform.machine() != "x86_64", reason="x86_64 only")
 def test_ruyi_toolchain_gnu_milkv(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
@@ -195,6 +204,10 @@ ruyi-deactivate
     assert child.exitstatus == 0
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="gnu-plct-rv64ilp32-elf has no macOS artifact",
+)
 def test_ruyi_toolchain_gnu_plct_rv64ilp32_elf(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
     ruyi_install(
@@ -257,6 +270,10 @@ ruyi-deactivate
     assert child.exitstatus == 0
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="gnu-plct has no macOS artifact",
+)
 def test_ruyi_toolchain_gnu_plct_xiangshan_nanhu(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
     ruyi_install(

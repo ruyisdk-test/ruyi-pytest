@@ -1,4 +1,6 @@
 import pexpect
+import pytest
+import sys
 
 from pathlib import Path
 from typing import Dict
@@ -12,6 +14,10 @@ from tests.helpers import (
 )
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="board-util/wlink has no macOS artifact",
+)
 def test_ruyi_self_clean(
     ruyi_exe: str,
     ruyi_dep: bool,

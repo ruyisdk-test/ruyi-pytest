@@ -1,6 +1,8 @@
 
 import hashlib
 import pexpect
+import pytest
+import sys
 import time
 import urllib.request
 
@@ -10,6 +12,10 @@ from typing import Dict
 from tests.helpers import bind_gettext, ruyi_init_default_telemetry, spawn_ruyi
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="gnu-upstream has no macOS artifact",
+)
 def test_ruyi_install(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
     _ = bind_gettext(isolated_env, {
         "zh_CN.UTF-8": {
@@ -154,6 +160,10 @@ def test_ruyi_install(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str
     assert child.exitstatus == 1
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="gnu-upstream has no macOS artifact",
+)
 def test_ruyi_install_fetch_reinstall_and_alias(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str]):
     _ = bind_gettext(isolated_env, {
         "zh_CN.UTF-8": {

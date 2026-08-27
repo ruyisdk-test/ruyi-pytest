@@ -1,6 +1,7 @@
 import platform
 import pexpect
 import pytest
+import sys
 
 from pathlib import Path
 from typing import Dict
@@ -8,6 +9,10 @@ from typing import Dict
 from tests.helpers import bind_gettext, ruyi_init_default_telemetry, ruyi_install, spawn_ruyi
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="llvm-upstream and gnu-plct have no macOS artifacts",
+)
 def test_ruyi_venv(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
     """
     test venv
@@ -158,6 +163,10 @@ def test_ruyi_venv(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], 
     assert child.exitstatus == 0
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="gnu-plct has no macOS artifact",
+)
 def test_ruyi_venv_sysroot_options(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
     _ = bind_gettext(isolated_env, {
         "zh_CN.UTF-8": {
@@ -249,6 +258,10 @@ def test_ruyi_venv_sysroot_options(ruyi_exe: str, ruyi_dep: bool, isolated_env: 
     assert child.exitstatus == 0
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="toolchain and emulator packages have no macOS artifacts",
+)
 @pytest.mark.skipif(platform.machine() != "x86_64", reason="x86_64 only")
 def test_ruyi_venv_emulator(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
     """

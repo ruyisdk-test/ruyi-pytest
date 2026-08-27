@@ -4,6 +4,7 @@ import pexpect
 import platform
 import pytest
 import struct
+import sys
 
 from pathlib import Path
 from typing import Dict
@@ -218,6 +219,10 @@ def write_hello_elf_riscv32(hello_elf: Path):
     os.chmod(hello_elf, 0o755)
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="box64-upstream has no macOS artifact",
+)
 @pytest.mark.skipif(platform.machine() not in ["riscv64", "aarch64"], reason="riscv64/aarch64 only")
 def test_box64(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
 
@@ -261,6 +266,10 @@ def test_box64(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_
     assert child.exitstatus == 0
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="QEMU user-mode packages have no macOS artifacts",
+)
 @pytest.mark.skipif(platform.machine() != "x86_64", reason="x86_64 only")
 def test_qemu_user_riscv(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
 
@@ -326,6 +335,10 @@ def test_qemu_user_riscv(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, 
         assert child.exitstatus == 0
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="test executes a Linux ELF binary",
+)
 @pytest.mark.skipif(platform.machine() != "x86_64", reason="x86_64 only")
 def test_hello_elf_x86_64(isolated_env: Dict[str, str], tmp_path: Path):
     """
