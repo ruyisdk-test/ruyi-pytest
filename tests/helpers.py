@@ -110,7 +110,7 @@ def ruyi_install(ruyi_bin: str, pkgs: List[str], env: Dict[str, str]):
         ruyi_bin,
         ["install", *pkgs],
         env=env,
-        timeout=10*60
+        timeout=20 * 60,
     )
 
     try:

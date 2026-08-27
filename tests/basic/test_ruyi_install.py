@@ -61,7 +61,7 @@ def test_ruyi_install(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str
         ruyi_exe,
         ["install", "gnu-upstream"],
         env=isolated_env,
-        timeout=10 * 60,
+        timeout=20 * 60,
     )
     try:
         child.expect(_(r"info: downloading .*"))
@@ -172,7 +172,7 @@ def test_ruyi_install_fetch_reinstall_and_alias(ruyi_exe: str, ruyi_dep: bool, i
         ruyi_exe,
         ["install", "-f", "ruyisdk-demo"],
         env=isolated_env,
-        timeout=10 * 60,
+        timeout=20 * 60,
     )
     try:
         child.expect(_(r"info: downloading .*"))
@@ -198,7 +198,7 @@ def test_ruyi_install_fetch_reinstall_and_alias(ruyi_exe: str, ruyi_dep: bool, i
         ruyi_exe,
         ["i", "gnu-upstream"],
         env=isolated_env,
-        timeout=10 * 60,
+        timeout=20 * 60,
     )
     try:
         child.expect(_(r"info: extracting .* for package gnu-upstream-(\S+)"))

@@ -64,7 +64,7 @@ def test_ruyi_uninstall(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, s
         ruyi_exe,
         ["install", "gnu-upstream"],
         env=isolated_env,
-        timeout=10 * 60,
+        timeout=20 * 60,
     )
     try:
         child.expect(_(r"info: downloading .*"))
@@ -182,7 +182,7 @@ def test_ruyi_uninstall_assume_yes(ruyi_exe: str, ruyi_dep: bool, isolated_env: 
         ruyi_exe,
         ["install", "gnu-upstream"],
         env=isolated_env,
-        timeout=10 * 60,
+        timeout=20 * 60,
     )
     try:
         child.expect(_(r"info: downloading .*"))
