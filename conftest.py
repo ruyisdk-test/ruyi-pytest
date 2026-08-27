@@ -25,22 +25,22 @@ def ruyi_exe() -> str:
     return ruyi
 
 
-def _read_ruyi_version(executable: str | Path, env: Dict[str, str]) -> str:
-    executable = str(executable)
+@pytest.fixture
+def ruyi_version(ruyi_exe: str, isolated_env: Dict[str, str]) -> str:
     try:
         result = subprocess.run(
-            [executable, "--version"],
+            [ruyi_exe, "--version"],
             capture_output=True,
             text=True,
             timeout=20,
             check=False,
-            env=env,
+            env=isolated_env,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        pytest.fail(f"failed to run `{executable} --version`: {exc}")
+        pytest.fail(f"failed to run `{ruyi_exe} --version`: {exc}")
     match = re.search(r"^Ruyi (\S+)", result.stdout, re.MULTILINE)
     if result.returncode != 0 or match is None:
-        pytest.fail(f"failed to determine `{executable}` version")
+        pytest.fail(f"failed to determine `{ruyi_exe}` version")
     return match.group(1)
 
 
@@ -64,14 +64,13 @@ def _download(url: str, destination: Path) -> None:
 
 @pytest.fixture
 def standalone_artifact(
-    ruyi_exe: str,
+    ruyi_version: str,
     isolated_env: Dict[str, str],
     tmp_path: Path,
 ) -> Path:
     """Download the official same-version standalone artifact automatically."""
     version_root = tmp_path / "standalone-download"
     version_root.mkdir(parents=True, exist_ok=True)
-    expected_version = _read_ruyi_version(ruyi_exe, isolated_env)
     machine = platform.machine().lower()
     if sys.platform == "linux":
         try:
@@ -84,18 +83,18 @@ def standalone_artifact(
             }[machine]
         except KeyError:
             pytest.skip(f"no official Ruyi standalone artifact for host {machine!r}")
-        asset = f"ruyi-{expected_version}.{suffix}"
+        asset = f"ruyi-{ruyi_version}.{suffix}"
     elif sys.platform == "darwin" and machine == "arm64":
-        asset = f"ruyi-{expected_version}.macos-arm64"
+        asset = f"ruyi-{ruyi_version}.macos-arm64"
     else:
         pytest.skip(
             "automatic standalone self-uninstall artifacts are unavailable "
             f"for {sys.platform}/{machine}"
         )
-    channel = "testing" if "-" in expected_version else "releases"
+    channel = "testing" if "-" in ruyi_version else "releases"
     urls = [
-        f"https://mirror.iscas.ac.cn/ruyisdk/ruyi/{channel}/{expected_version}/{asset}",
-        f"https://github.com/ruyisdk/ruyi/releases/download/{expected_version}/{asset}",
+        f"https://mirror.iscas.ac.cn/ruyisdk/ruyi/{channel}/{ruyi_version}/{asset}",
+        f"https://github.com/ruyisdk/ruyi/releases/download/{ruyi_version}/{asset}",
     ]
 
     artifact = version_root / asset
@@ -122,12 +121,25 @@ def standalone_artifact(
         | stat.S_IXGRP
         | stat.S_IXOTH
     )
-    actual_version = _read_ruyi_version(str(validation_copy), isolated_env)
-    if actual_version != expected_version:
+    try:
+        result = subprocess.run(
+            [str(validation_copy), "--version"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+            env=isolated_env,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        validation_copy.unlink(missing_ok=True)
+        pytest.fail(f"failed to run downloaded standalone Ruyi: {exc}")
+    match = re.search(r"^Ruyi (\S+)", result.stdout, re.MULTILINE)
+    actual_version = match.group(1) if match is not None else None
+    if result.returncode != 0 or actual_version != ruyi_version:
         validation_copy.unlink(missing_ok=True)
         pytest.fail(
             "downloaded standalone Ruyi version does not match ruyi_exe: "
-            f"{actual_version!r} != {expected_version!r}"
+            f"{actual_version!r} != {ruyi_version!r}"
         )
 
     validation_copy.unlink()
