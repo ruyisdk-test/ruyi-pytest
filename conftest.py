@@ -92,10 +92,18 @@ def standalone_artifact(
             f"for {sys.platform}/{machine}"
         )
     channel = "testing" if "-" in ruyi_version else "releases"
-    urls = [
-        f"https://mirror.iscas.ac.cn/ruyisdk/ruyi/{channel}/{ruyi_version}/{asset}",
-        f"https://github.com/ruyisdk/ruyi/releases/download/{ruyi_version}/{asset}",
-    ]
+    github_url = (
+        f"https://github.com/ruyisdk/ruyi/releases/download/{ruyi_version}/{asset}"
+    )
+    iscas_url = (
+        f"https://mirror.iscas.ac.cn/ruyisdk/ruyi/"
+        f"{channel}/{ruyi_version}/{asset}"
+    )
+    urls = (
+        [iscas_url, github_url]
+        if isolated_env.get("RUYI_REPO") in ("ISCAS", "GITEE")
+        else [github_url, iscas_url]
+    )
 
     artifact = version_root / asset
     errors: list[str] = []
