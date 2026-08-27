@@ -7,6 +7,7 @@ from tests.helpers import (
     bind_gettext,
     ruyi_init_default_telemetry,
     spawn_ruyi,
+    xfail_known_ruyi_defect,
 )
 
 
@@ -119,6 +120,7 @@ def test_ruyi_entity_queries_and_feature_gate(ruyi_exe: str, isolated_env: Dict[
 
 def test_ruyi_entity_multiple_type_filter(
     ruyi_exe: str,
+    ruyi_version: str,
     isolated_env: Dict[str, str],
 ):
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
@@ -154,4 +156,10 @@ def test_ruyi_entity_multiple_type_filter(
         child.close()
     assert child.exitstatus == 0
     assert "'device:milkv-duo':" in output
+    if "'uarch:generic-rv64gc':" not in output:
+        xfail_known_ruyi_defect(
+            ruyi_version,
+            ("0.52.0-beta.20260824",),
+            "entity list only applies the first repeated --entity-type filter",
+        )
     assert "'uarch:generic-rv64gc':" in output
