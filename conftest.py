@@ -251,6 +251,7 @@ def isolated_env(tmp_path: Path) -> Dict[str, str]:
     for key in (
         "LANGUAGE",
         "LC_ALL",
+        "LC_CTYPE",
         "LC_MESSAGES",
         "RUYI_DEBUG",
         "RUYI_DEBUG_FORCE_FIRST_RUN",
