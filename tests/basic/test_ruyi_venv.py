@@ -11,7 +11,7 @@ from tests.helpers import bind_gettext, ruyi_init_default_telemetry, ruyi_instal
 
 @pytest.mark.skipif(
     sys.platform == "darwin",
-    reason="llvm-upstream and gnu-plct have no macOS artifacts",
+    reason="llvm-upstream has no macOS artifact",
 )
 def test_ruyi_venv(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
     """
@@ -33,7 +33,7 @@ def test_ruyi_venv(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], 
 
     ruyi_install(
         ruyi_exe,
-        pkgs=["llvm-upstream", "gnu-plct"],
+        pkgs=["llvm-upstream", "gnu-ruyisdk"],
         env=isolated_env,
     )
 
@@ -42,7 +42,7 @@ def test_ruyi_venv(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], 
 
     child = spawn_ruyi(
         ruyi_exe,
-        ["venv", "--toolchain", "gnu-plct", "generic", str(venv_path)],
+        ["venv", "--toolchain", "gnu-ruyisdk", "generic", str(venv_path)],
         env=isolated_env,
     )
     try:
@@ -71,8 +71,8 @@ def test_ruyi_venv(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], 
         child.sendline(f'source "{venv_path}/bin/ruyi-activate"')
         child.expect_exact(f"«Ruyi {venv_path.name}» $ ")
 
-        child.sendline("riscv64-plct-linux-gnu-gcc --version")
-        child.expect_exact("riscv64-plct-linux-gnu-gcc")
+        child.sendline("riscv64-ruyisdk-linux-gnu-gcc --version")
+        child.expect_exact("riscv64-ruyisdk-linux-gnu-gcc")
         child.expect_exact("Copyright")
 
         child.sendline("ruyi-deactivate")
@@ -92,7 +92,7 @@ def test_ruyi_venv(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], 
     venv_path = tmp_path / "rit-ruyi-basic-ruyi-llvm"
     child = spawn_ruyi(
         ruyi_exe,
-        ["venv", "-t", "llvm-upstream", "--sysroot-from", "gnu-plct", "generic", str(venv_path)],
+        ["venv", "-t", "llvm-upstream", "--sysroot-from", "gnu-ruyisdk", "generic", str(venv_path)],
         env=isolated_env,
     )
     try:
@@ -163,10 +163,6 @@ def test_ruyi_venv(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], 
     assert child.exitstatus == 0
 
 
-@pytest.mark.skipif(
-    sys.platform == "darwin",
-    reason="gnu-plct has no macOS artifact",
-)
 def test_ruyi_venv_sysroot_options(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
     _ = bind_gettext(isolated_env, {
         "zh_CN.UTF-8": {
@@ -177,7 +173,7 @@ def test_ruyi_venv_sysroot_options(ruyi_exe: str, ruyi_dep: bool, isolated_env: 
 
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
 
-    ruyi_install(ruyi_exe, pkgs=["gnu-plct"], env=isolated_env)
+    ruyi_install(ruyi_exe, pkgs=["gnu-ruyisdk"], env=isolated_env)
 
     sysroot = tmp_path / "sysroot"
     (sysroot / "usr" / "include").mkdir(parents=True)
@@ -189,7 +185,7 @@ def test_ruyi_venv_sysroot_options(ruyi_exe: str, ruyi_dep: bool, isolated_env: 
     without_sysroot = tmp_path / "without-sysroot"
     child = spawn_ruyi(
         ruyi_exe,
-        ["venv", "-t", "gnu-plct", "--without-sysroot", "--name", "CustomName", "generic", str(without_sysroot)],
+        ["venv", "-t", "gnu-ruyisdk", "--without-sysroot", "--name", "CustomName", "generic", str(without_sysroot)],
         env=isolated_env,
     )
     try:
@@ -204,7 +200,7 @@ def test_ruyi_venv_sysroot_options(ruyi_exe: str, ruyi_dep: bool, isolated_env: 
     copied = tmp_path / "copied-sysroot"
     child = spawn_ruyi(
         ruyi_exe,
-        ["venv", "-t", "gnu-plct", "--copy-sysroot-from-dir", str(sysroot), "generic", str(copied)],
+        ["venv", "-t", "gnu-ruyisdk", "--copy-sysroot-from-dir", str(sysroot), "generic", str(copied)],
         env=isolated_env,
     )
     try:
@@ -218,7 +214,7 @@ def test_ruyi_venv_sysroot_options(ruyi_exe: str, ruyi_dep: bool, isolated_env: 
     symlinked = tmp_path / "symlinked-sysroot"
     child = spawn_ruyi(
         ruyi_exe,
-        ["venv", "-t", "gnu-plct", "--symlink-sysroot-from-dir", str(sysroot), "generic", str(symlinked)],
+        ["venv", "-t", "gnu-ruyisdk", "--symlink-sysroot-from-dir", str(sysroot), "generic", str(symlinked)],
         env=isolated_env,
     )
     try:
@@ -233,7 +229,7 @@ def test_ruyi_venv_sysroot_options(ruyi_exe: str, ruyi_dep: bool, isolated_env: 
     projected = tmp_path / "projected-sysroot"
     child = spawn_ruyi(
         ruyi_exe,
-        ["venv", "-t", "gnu-plct", "--project-sysroot-from-rootfs", str(rootfs), "generic", str(projected)],
+        ["venv", "-t", "gnu-ruyisdk", "--project-sysroot-from-rootfs", str(rootfs), "generic", str(projected)],
         env=isolated_env,
     )
     try:
@@ -247,7 +243,7 @@ def test_ruyi_venv_sysroot_options(ruyi_exe: str, ruyi_dep: bool, isolated_env: 
     extra = tmp_path / "extra-commands"
     child = spawn_ruyi(
         ruyi_exe,
-        ["venv", "-t", "gnu-plct", "--extra-commands-from", "gnu-plct", "generic", str(extra)],
+        ["venv", "-t", "gnu-ruyisdk", "--extra-commands-from", "gnu-ruyisdk", "generic", str(extra)],
         env=isolated_env,
     )
     try:
@@ -260,7 +256,7 @@ def test_ruyi_venv_sysroot_options(ruyi_exe: str, ruyi_dep: bool, isolated_env: 
 
 @pytest.mark.skipif(
     sys.platform == "darwin",
-    reason="toolchain and emulator packages have no macOS artifacts",
+    reason="llvm-upstream and qemu-user-riscv-upstream have no macOS artifacts",
 )
 @pytest.mark.skipif(platform.machine() != "x86_64", reason="x86_64 only")
 def test_ruyi_venv_emulator(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
@@ -283,7 +279,7 @@ def test_ruyi_venv_emulator(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[st
 
     ruyi_install(
         ruyi_exe,
-        pkgs=["llvm-upstream", "gnu-plct", "qemu-user-riscv-upstream"],
+        pkgs=["llvm-upstream", "gnu-ruyisdk", "qemu-user-riscv-upstream"],
         env=isolated_env,
     )
 
@@ -292,7 +288,7 @@ def test_ruyi_venv_emulator(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[st
 
     child = spawn_ruyi(
         ruyi_exe,
-        ["venv", "--toolchain", "gnu-plct", "-e", "qemu-user-riscv-upstream", "generic", str(venv_path)],
+        ["venv", "--toolchain", "gnu-ruyisdk", "-e", "qemu-user-riscv-upstream", "generic", str(venv_path)],
         env=isolated_env,
     )
     try:
@@ -321,8 +317,8 @@ def test_ruyi_venv_emulator(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[st
         child.sendline(f'source "{venv_path}/bin/ruyi-activate"')
         child.expect_exact(f"«Ruyi {venv_path.name}» $ ")
 
-        child.sendline("riscv64-plct-linux-gnu-gcc --version")
-        child.expect_exact("riscv64-plct-linux-gnu-gcc")
+        child.sendline("riscv64-ruyisdk-linux-gnu-gcc --version")
+        child.expect_exact("riscv64-ruyisdk-linux-gnu-gcc")
         child.expect_exact("Copyright")
 
         child.sendline("ruyi-deactivate")
@@ -341,7 +337,7 @@ def test_ruyi_venv_emulator(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[st
     venv_path = tmp_path / "rit-ruyi-basic-ruyi-llvm"
     child = spawn_ruyi(
         ruyi_exe,
-        ["venv", "-t", "llvm-upstream", "--sysroot-from", "gnu-plct", "-e", "qemu-user-riscv-upstream", "generic", str(venv_path)],
+        ["venv", "-t", "llvm-upstream", "--sysroot-from", "gnu-ruyisdk", "-e", "qemu-user-riscv-upstream", "generic", str(venv_path)],
         env=isolated_env,
     )
     try:

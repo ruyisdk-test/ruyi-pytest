@@ -270,23 +270,19 @@ ruyi-deactivate
     assert child.exitstatus == 0
 
 
-@pytest.mark.skipif(
-    sys.platform == "darwin",
-    reason="gnu-plct has no macOS artifact",
-)
-def test_ruyi_toolchain_gnu_plct_xiangshan_nanhu(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
+def test_ruyi_toolchain_gnu_ruyisdk_xiangshan_nanhu(ruyi_exe: str, ruyi_dep: bool, isolated_env: Dict[str, str], tmp_path: Path):
     ruyi_init_default_telemetry(ruyi_exe, isolated_env)
     ruyi_install(
         ruyi_exe,
-        ["gnu-plct", ],
+        ["gnu-ruyisdk", ],
         env=isolated_env,
     )
 
-    venv_path = tmp_path / "rit-ruyi-basic-ruyi-toolchain_gnu-plct_xiangshan-nanhu"
+    venv_path = tmp_path / "rit-ruyi-basic-ruyi-toolchain_gnu-ruyisdk_xiangshan-nanhu"
 
     child = spawn_ruyi(
         ruyi_exe,
-        ["venv", "-t", "gnu-plct", "xiangshan-nanhu", str(venv_path)],
+        ["venv", "-t", "gnu-ruyisdk", "xiangshan-nanhu", str(venv_path)],
         env=isolated_env,
     )
     try:
@@ -329,7 +325,7 @@ int main()
             "-c",
             f'''
 source "{venv_path}/bin/ruyi-activate"
-riscv64-plct-linux-gnu-gcc -O2 -c -o "{test_o}" "{test_c}"
+riscv64-ruyisdk-linux-gnu-gcc -O2 -c -o "{test_o}" "{test_c}"
 echo $?
 ruyi-deactivate
             ''',

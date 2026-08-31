@@ -111,7 +111,7 @@ def test_ruyi_entity_queries_and_feature_gate(ruyi_exe: str, isolated_env: Dict[
     )
     try:
         child.expect_exact(_("List of available packages:"))
-        child.expect_exact("toolchain/gnu-plct")
+        child.expect_exact("toolchain/gnu-ruyisdk")
         child.expect(pexpect.EOF)
     finally:
         child.close()
