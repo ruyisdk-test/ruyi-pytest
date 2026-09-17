@@ -159,12 +159,11 @@ def test_ruyi_repo(ruyi_exe: str, isolated_env: Dict[str, str]):
 def test_ruyi_repo_default(ruyi_exe: str, isolated_env: Dict[str, str]):
     _ = bind_gettext(isolated_env, {
         "zh_CN.UTF-8": {
-            "fatal error: no repo with id 'ruyisdk' found in user config":
-                "致命错误：在用户配置中未找到 ID 为 'ruyisdk' 的软件包仓库",
             "fatal error: cannot remove the default repo 'ruyisdk'; use 'repo disable' instead":
                 "致命错误：无法移除默认仓库 'ruyisdk'；请使用 'repo disable' 来禁用它",
             "info: repo 'ruyisdk' enabled": "信息：已启用软件包仓库 'ruyisdk'",
-            "info: repo 'ruyisdk' disabled": "信息：已禁用软件包仓库 'ruyisdk'"
+            "info: repo 'ruyisdk' disabled": "信息：已禁用软件包仓库 'ruyisdk'",
+            "info: repo 'ruyisdk' priority set to 20": "信息：软件包仓库 'ruyisdk' 的优先级已设置为 20"
         },
     })
 
@@ -229,10 +228,11 @@ def test_ruyi_repo_default(ruyi_exe: str, isolated_env: Dict[str, str]):
         timeout=60,
     )
     try:
-        child.expect_exact(_("fatal error: no repo with id 'ruyisdk' found in user config"))
+        child.expect_exact(_("info: repo 'ruyisdk' priority set to 20"))
         child.expect(pexpect.EOF)
     finally:
         child.close()
+    assert child.exitstatus == 0
 
 
 def test_ruyi_repo_error_cases(ruyi_exe: str, isolated_env: Dict[str, str]):
