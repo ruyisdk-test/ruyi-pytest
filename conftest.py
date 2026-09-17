@@ -16,6 +16,12 @@ import pytest
 
 
 @pytest.fixture
+def should_skip_standalone_tests() -> bool:
+    v = os.environ.get("RUYI_PYTEST_SKIP_STANDALONE_TESTS", "").lower()
+    return v in ("1", "true")
+
+
+@pytest.fixture
 def ruyi_exe() -> str:
     """Return the single PATH-resolved Ruyi executable used by the suite."""
     ruyi = shutil.which("ruyi")
@@ -64,11 +70,16 @@ def _download(url: str, destination: Path) -> None:
 
 @pytest.fixture
 def standalone_artifact(
+    should_skip_standalone_tests: bool,
     ruyi_version: str,
     isolated_env: Dict[str, str],
     tmp_path: Path,
 ) -> Path:
     """Download the official same-version standalone artifact automatically."""
+
+    if should_skip_standalone_tests:
+        pytest.skip("requested to skip standalone artifact tests")
+
     version_root = tmp_path / "standalone-download"
     version_root.mkdir(parents=True, exist_ok=True)
     machine = platform.machine().lower()
@@ -156,10 +167,15 @@ def standalone_artifact(
 
 @pytest.fixture
 def standalone_exe(
+    should_skip_standalone_tests: bool,
     standalone_artifact: Path,
     tmp_path: Path,
 ) -> Iterator[Callable[[str], Path]]:
     """Return temporary copies of the automatically downloaded artifact."""
+
+    if should_skip_standalone_tests:
+        pytest.skip("requested to skip standalone artifact tests")
+
     source_digest = _sha256(standalone_artifact)
 
     def copy_for_test(label: str) -> Path:
